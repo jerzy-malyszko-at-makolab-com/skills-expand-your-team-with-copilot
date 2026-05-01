@@ -470,6 +470,32 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.entries(filteredActivities).forEach(([name, details]) => {
       renderActivityCard(name, details);
     });
+
+    // Highlight activity from shared link after rendering
+    highlightSharedActivity();
+  }
+
+  // Build a share URL with the activity name as a query parameter
+  function getActivityShareUrl(activityName) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("activity", activityName);
+    return url.toString();
+  }
+
+  // Highlight and scroll to an activity if the URL contains an ?activity= parameter
+  function highlightSharedActivity() {
+    const params = new URLSearchParams(window.location.search);
+    const sharedActivity = params.get("activity");
+    if (!sharedActivity) return;
+
+    const cards = activitiesList.querySelectorAll(".activity-card");
+    cards.forEach((card) => {
+      const heading = card.querySelector("h4");
+      if (heading && heading.textContent.trim() === sharedActivity) {
+        card.classList.add("activity-highlight");
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
   }
 
   // Function to render a single activity card
@@ -569,6 +595,23 @@ document.addEventListener("DOMContentLoaded", () => {
         `
         }
       </div>
+      <div class="share-section">
+        <span class="share-label">Share:</span>
+        <div class="share-buttons">
+          <button class="share-button share-whatsapp tooltip" data-activity="${name}" data-description="${details.description.replace(/"/g, "&quot;")}" aria-label="Share on WhatsApp">
+            💬
+            <span class="tooltip-text">Share on WhatsApp</span>
+          </button>
+          <button class="share-button share-email tooltip" data-activity="${name}" data-description="${details.description.replace(/"/g, "&quot;")}" aria-label="Share via Email">
+            ✉️
+            <span class="tooltip-text">Share via Email</span>
+          </button>
+          <button class="share-button share-copy tooltip" data-activity="${name}" aria-label="Copy link">
+            🔗
+            <span class="tooltip-text">Copy link</span>
+          </button>
+        </div>
+      </div>
     `;
 
     // Add click handlers for delete buttons
@@ -586,6 +629,39 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    // Add click handlers for share buttons
+    activityCard.querySelector(".share-whatsapp").addEventListener("click", (e) => {
+      const activityName = e.currentTarget.dataset.activity;
+      const description = e.currentTarget.dataset.description;
+      const shareUrl = getActivityShareUrl(activityName);
+      const text = `Check out this activity at Mergington High School: ${activityName} — ${description} ${shareUrl}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    });
+
+    activityCard.querySelector(".share-email").addEventListener("click", (e) => {
+      const activityName = e.currentTarget.dataset.activity;
+      const description = e.currentTarget.dataset.description;
+      const shareUrl = getActivityShareUrl(activityName);
+      const subject = `Activity at Mergington High School: ${activityName}`;
+      const body = `Hi,\n\nI wanted to share this activity with you:\n\n${activityName}\n${description}\n\nSign up here: ${shareUrl}`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    });
+
+    activityCard.querySelector(".share-copy").addEventListener("click", (e) => {
+      const copyButton = e.currentTarget;
+      const activityName = copyButton.dataset.activity;
+      const shareUrl = getActivityShareUrl(activityName);
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        const tooltip = copyButton.querySelector(".tooltip-text");
+        tooltip.textContent = "Copied!";
+        setTimeout(() => {
+          tooltip.textContent = "Copy link";
+        }, 2000);
+      }).catch(() => {
+        showMessage("Could not copy link. Please copy the URL manually.", "error");
+      });
+    });
 
     activitiesList.appendChild(activityCard);
   }
